@@ -33,7 +33,7 @@ _start:
 
 	push eax		;amount of bytes read to the stack
 	cmp eax, edx		;check if buffer was not filled
-	jl print_ln
+	jl skip_flush
 	mov byte [esp+19], 0xa	;set the last byte of the buffer to \n (15th byte + 4 for push)
 	
 	sub esp, 1		;make 1byte space on stack	
@@ -45,17 +45,13 @@ flush_buf:			;empty stdin buffer
 	int 0x80
 	cmp byte [esp], 0x0a	;compare to \n
 	jne flush_buf
-
-	add esp, 1		;remove buffer
-
-print_ln:
-	mov eax, 4		;sys_read
-	mov ebx, 1		;stdout
-	pop edx			;amount of bytes read from the stack
-	lea ecx, [esp]		;point at stack (after bytes read is popped off)
-	int 0x80
+	add esp, 1		;remove buffer, realign stack
 	
-	call print_flag
+skip_flush:
+	cmp dword [esp+4], 0x67414c66
+	jne consider
+	call pdatamsg
+	jmp print_flag
 	
 pdatamsg:
 	mov eax, 4
@@ -64,6 +60,16 @@ pdatamsg:
 	mov edx, len
 	int 0x80
 	ret
+
+consider:
+	mov eax, 4
+	mov ebx, 1
+	push 0xa
+	push 0x65706f6e
+	lea ecx, [esp]
+	mov edx, 5
+	int 0x80
+	add esp, 5
 	
 print_flag:
 	mov eax, 1		;1 is code for sys_exit
