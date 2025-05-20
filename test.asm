@@ -12,42 +12,48 @@ _start:
 	mov edx, 18		;the length of said message
 	int 0x80		;call kernel
 
-	call pdatamsg
 	mov word [msg+5], 0x7274
 	cmp byte [msg+11], 0x2f
 	je print_flag
 	xor byte [msg+7], 0x20
-	call pdatamsg
-
-	mov eax, 3		;sys_read
-	mov ebx, 0		;fd 0 is stdin
-	push 0x00000000
-	push 0x00000000
-	lea ecx, [esp]
-	mov edx, 7
+	
+;print question
+	mov eax, 4
+	mov ebx, 1
+	mov ecx, qu
+	mov edx, ql
+	int 0x80
+	
+	sub esp, 16		;make 16 bytes of space on stack
+	mov eax, 3		;sys_read	
+	mov ebx, 0		;stdin
+	lea ecx, [esp]		;stack
+	mov edx, 16		;16 bytes to sys_read
 	int 0x80
 
-	sub esp, 1		;allocate space on the stack for our flush
+	push eax		;amount of bytes read to the stack
+	cmp eax, edx		;check if buffer was not filled
+	jl print_ln
+	mov byte [esp+19], 0xa	;set the last byte of the buffer to \n (15th byte + 4 for push)
 	
-clear_buf:			;to flush stdin buffer
-	mov eax, 3		;read opcode
+	sub esp, 1		;make 1byte space on stack	
+flush_buf:			;empty stdin buffer
+	mov eax, 3		;sys_read
 	mov ebx, 0		;stdin
-	lea ecx, [esp]		;bottom of the stack
-	mov edx, 1		;read 1 byte at a time
-	int 0x80		;syscall
-	cmp byte [esp], 0xa	;check if byte read was \n
-	jne clear_buf		;if no, reread stdin
+	lea ecx, [esp]		;stack
+	mov edx, 1		;read 1 byte
+	int 0x80
+	cmp byte [esp], 0x0a	;compare to \n
+	jne flush_buf
 
-	add esp, 1		;realign stack
-	
-	
-	mov byte [esp+7], 0x0a
-	mov eax, 4		;4 is code for sys_write
-	mov ebx, 1		;fd 1 is stdout
-	mov ecx, esp		;get address of top of stack (lowest address)
-	mov edx, 8		;the length of said message
-	int 0x80		;call kernel
-	add esp, 8
+	add esp, 1		;remove buffer
+
+print_ln:
+	mov eax, 4		;sys_read
+	mov ebx, 1		;stdout
+	pop edx			;amount of bytes read from the stack
+	lea ecx, [esp]		;point at stack (after bytes read is popped off)
+	int 0x80
 	
 	call print_flag
 	
@@ -62,8 +68,10 @@ pdatamsg:
 print_flag:
 	mov eax, 1		;1 is code for sys_exit
 	mov ebx, 0		;0 is successful exit
-	int 0x80		;call kernel
+	int 0x80		;call2 kernel
 	
 section .data
 	msg db "flag{y5a3_00t}", 0xa
 	len equ $ -msg
+	qu db "Whats the password?: "
+	ql equ $-qu
