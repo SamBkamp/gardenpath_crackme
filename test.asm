@@ -14,7 +14,7 @@ _start:
 
 	mov word [msg+5], 0x7274
 	cmp byte [msg+11], 0x2f
-	je print_flag
+	je exit
 	xor byte [msg+7], 0x20
 	
 ;print question
@@ -49,9 +49,9 @@ flush_buf:			;empty stdin buffer
 	
 skip_flush:
 	cmp dword [esp+4], 0x67414c66
-	jne consider
+	jne flag
 	call pdatamsg
-	jmp print_flag
+	jmp exit
 	
 pdatamsg:
 	mov eax, 4
@@ -61,7 +61,7 @@ pdatamsg:
 	int 0x80
 	ret
 
-consider:
+flag:
 	mov eax, 4
 	mov ebx, 1
 	push 0xa
@@ -71,7 +71,7 @@ consider:
 	int 0x80
 	add esp, 5
 	
-print_flag:
+exit:
 	mov eax, 1		;1 is code for sys_exit
 	mov ebx, 0		;0 is successful exit
 	int 0x80		;call2 kernel
