@@ -1,7 +1,7 @@
 section .text
 global _start:
 _start:
-	push 0x00000a3a
+	push 0x00000a3a		;the flag base
 	push 0x656D6B63
 	push 0x61726320
 	push 0x796D2065
@@ -49,7 +49,7 @@ flush_buf:			;empty stdin buffer
 	
 skip_flush:
 	cmp dword [esp+4], 0x67414c66
-	jne flag
+	jne wrong_flag
 	call pdatamsg
 	jmp exit
 	
@@ -61,7 +61,7 @@ pdatamsg:
 	int 0x80
 	ret
 
-flag:
+wrong_flag:
 	mov eax, 4
 	mov ebx, 1
 	push 0xa
