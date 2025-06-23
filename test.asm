@@ -16,8 +16,7 @@ _start:
 	cmp byte [msg+11], 0x2f
 	je exit
 	xor byte [msg+7], 0x20
-	
-;print question
+
 	mov eax, 4
 	mov ebx, 1
 	mov ecx, qu
@@ -34,7 +33,7 @@ _start:
 	push eax		;amount of bytes read to the stack
 	cmp eax, edx		;check if buffer was not filled
 	jl skip_flush
-	mov byte [esp+19], 0xa	;set the last byte of the buffer to \n (15th byte + 4 for push)
+	mov byte [esp+19], 0xa	;set the last byte of the buffer to \n (15th byte + 4 for push eax)
 	
 	sub esp, 1		;make 1byte space on stack	
 flush_buf:			;empty stdin buffer
@@ -48,12 +47,18 @@ flush_buf:			;empty stdin buffer
 	add esp, 1		;remove buffer, realign stack
 	
 skip_flush:
-	cmp dword [esp+4], 0x67414c66
+	cmp dword [esp+4], 0x67414c66 ;"fLAg"
 	jne wrong_flag
-	call pdatamsg
+	cmp byte [esp], 4
+	jl exit
+	lea eax, [skip_flush]
+	and eax, 0xffffff00 	;c4 offset is print flag
+	add al, [esp+9]		;load only 1 byte
+	add eax, 0x7a		;if esp+9 is "L", this will add to create 0xc4
+	call eax
 	jmp exit
 	
-pdatamsg:
+print_flag:
 	mov eax, 4
 	mov ebx, 1
 	mov ecx, msg
@@ -61,11 +66,17 @@ pdatamsg:
 	int 0x80
 	ret
 
+print_stuff:			;pass char* ecx, int edx
+	mov eax, 4
+	mov ebx, 1
+	int 0x80
+	ret
+
 wrong_flag:
 	mov eax, 4
 	mov ebx, 1
 	push 0xa
-	push 0x65706f6e
+	push 0x65706f6e 	;"nope"
 	lea ecx, [esp]
 	mov edx, 5
 	int 0x80
