@@ -1,17 +1,5 @@
 section .text
-global _start:
-holy:
-	push 0x0a736579		;"yes\n"
-	mov eax, 4		;sys_write
-	mov ebx, 1		;stdout
-	lea ecx, [esp]
-	mov edx, 4
-	int 0x80
-
-	mov eax, 1		;sys_exit
-	mov ebx, 1
-	int 0x80
-	
+global _start:	
 _start:
 	push 0x00000a3a		;"solve my crackme"
 	push 0x656D6B63
@@ -67,9 +55,8 @@ post_flush:
 	lea eax, [post_flush]
 	and eax, 0xffffff00 	;c4 offset is print flag
 	add al, [esp+9]		;load only 1 byte
-	add eax, 0x7a		;if esp+9 is "L", this will add to create 0xc4
-	call eax
-	jmp exit
+	add eax, 0x78		;if esp+9 is "L", this will add to create 0xc4
+	jmp eax
 	
 print_flag:
 	mov eax, 4
@@ -77,7 +64,7 @@ print_flag:
 	mov ecx, msg
 	mov edx, len
 	int 0x80
-	ret
+	jmp exit
 
 print_stuff:			;pass char* ecx, int edx
 	mov eax, 4
