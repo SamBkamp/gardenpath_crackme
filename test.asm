@@ -23,9 +23,12 @@ _start:
 	mov ecx, esp		;get address of top of stack (lowest address)
 	mov edx, 18		;the length of said message
 	int 0x80		;call kernel
-		
+
+	mov word [msg+5], 0x7274
+	cmp byte [msg+11], 0x2f
+	je exit
+	xor byte [msg+7], 0x20
 	
-	;print question
 	mov eax, 4
 	mov ebx, 1
 	mov ecx, qu
@@ -45,18 +48,7 @@ _start:
 	mov byte [esp+19], 0xa	;set the last byte of the buffer to \n (15th byte + 4 for push)
 	
 	sub esp, 1		;make 1byte space on stack for flush_buf
-	call flush_buf
-	
-post_flush:
-	cmp dword [esp+4], 0x67414c66 ;fLAg
-	jne wrong_flag
-	movzx eax, byte [esp+9]
-	xor eax, 0xc5		;this needs to result in 0xa4 (0xc5 ^ 0xa4 = 0x61 'a')
-	mov ebx, $
-	sub ebx, eax		;current  offset from start of binary is 0xa4
-	jmp ebx			;WARNING: offset from start of binary will change should earlier lines be added or deleted
-	jmp exit
-	
+		
 flush_buf:
 	mov eax, 3		;sys_read
 	mov ebx, 0		;stdin
@@ -66,13 +58,38 @@ flush_buf:
 	cmp byte [esp], 0x0a	;compare to \n
 	jne flush_buf
 	add esp, 1		;remove buffer, realign stack
-	ret
 	
+post_flush:
+	cmp dword [esp+4], 0x67414c66 ;"fLAg"
+	jne wrong_flag
+	cmp byte [esp], 4
+	jl exit
+	lea eax, [post_flush]
+	and eax, 0xffffff00 	;c4 offset is print flag
+	add al, [esp+9]		;load only 1 byte
+	add eax, 0x7a		;if esp+9 is "L", this will add to create 0xc4
+	call eax
+	jmp exit
+	
+print_flag:
+	mov eax, 4
+	mov ebx, 1
+	mov ecx, msg
+	mov edx, len
+	int 0x80
+	ret
+
+print_stuff:			;pass char* ecx, int edx
+	mov eax, 4
+	mov ebx, 1
+	int 0x80
+	ret
+
 wrong_flag:
 	mov eax, 4
 	mov ebx, 1
 	push 0xa
-	push 0x65706f6e
+	push 0x65706f6e 	;"nope"
 	lea ecx, [esp]
 	mov edx, 5
 	int 0x80
