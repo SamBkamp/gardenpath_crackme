@@ -55,14 +55,14 @@ post_flush:
 	lea eax, [post_flush]
 	and eax, 0xffffff00 	;c4 offset is print flag
 	add al, [esp+9]		;load only 1 byte
-	add eax, 0x78		;if esp+9 is "L", this will add to create 0xc4
+	add eax, 0x47		;if esp+9 is "L", this will add to create 0xc4
 	jmp eax
 	
 print_flag:
 	mov eax, 4
 	mov ebx, 1
-	mov ecx, msg
-	mov edx, len
+	lea ecx, [com]
+	mov edx, comLen
 	int 0x80
 	jmp exit
 
@@ -92,3 +92,5 @@ section .data
 	len equ $ -msg
 	qu db "Whats the password?: "
 	ql equ $-qu
+	com db "congratz!", 0xa
+	comLen equ $-com
